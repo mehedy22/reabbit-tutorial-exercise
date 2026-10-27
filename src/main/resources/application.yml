@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: messaging-rabbitmq
+
+  # ─────────────── RabbitMQ ───────────────
+  rabbitmq:
+    # Connection: env vars win; defaults match compose.yaml for local runs.
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5673}            # compose.yaml maps the broker to host port 5673
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
+    # Reliability policy
+    publisher-confirm-type: correlated     # producer learns the broker safely received the message
+    publisher-returns: true                # unroutable messages are returned, not silently dropped
+    template:
+      mandatory: true                      # required for publisher-returns to fire on the RabbitTemplate
+    # Listener ack/requeue policy is set on the container in RabbitConfig: a hand-built
+    # SimpleMessageListenerContainer ignores spring.rabbitmq.listener.simple.*.
+
+  # Producer and consumer run as separate apps sharing one broker: start it if needed, but never
+  # stop it on exit (the other side may still be running). Stop it with `docker compose down`.
+  docker:
+    compose:
+      lifecycle-management: start-only
+
+  # Graceful shutdown window: consumers get up to this long to finish current work before stop.
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
